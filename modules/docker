@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+#######################################
+# Determine if we're running ISLET
+# in a containter and run docker
+# commands with sudo
+# Always runs
+# Globals:
+#  $SUDO_DOCKER - execute docker with
+#                 with sudo
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+
+unset $SUDO_DOCKER
+[[ -f /.dockerenv ]] && export SUDO_DOCKER=sudo
+
 ##############################################
 # Run verify scripts to ensure all is well
 # Globals:
@@ -12,28 +29,9 @@
 
 verify(){
   import_configs
-  running_in_container
   verify_group
   verify_availability
   return 0
-}
-
-#######################################
-# Determine if we're running ISLET
-# in a containter and run docker
-# commands with sudo
-# Globals:
-#  $SUDO_DOCKER - execute docker with
-#                 with sudo
-# Arguments:
-#   None
-# Returns:
-#   None
-#######################################
-
-running_in_container(){
-  unset $SUDO_DOCKER
-  [[ -f /.dockerenv ]] && SUDO_DOCKER=sudo
 }
 
 #######################################
@@ -135,7 +133,7 @@ does_image_exist(){
   local repo="$ENVIRONMENT"
   [[ "$repo" == *:* ]] && tag="${repo##*:}" && repo=${repo%%:*}
   [[ $tag ]] || tag=latest
-  if ! docker images | fgrep -w "$repo" | fgrep -w -q "$tag"; then
+  if ! $SUDO_DOCKER docker images | fgrep -w "$repo" | fgrep -w -q "$tag"; then
     notice "Image not found, trying Docker Hub..." && echo
     $SUDO_DOCKER docker pull "$ENVIRONMENT" 2>/dev/null || quit "Fatal: Image doesn't exist!"
   fi
